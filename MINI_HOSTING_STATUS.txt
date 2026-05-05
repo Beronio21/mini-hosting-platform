@@ -26,6 +26,15 @@ APPLIED / ALREADY DONE
 - Root docker-compose and Caddy files were added.
 - .gitignore was added for Node.js / Next.js / build outputs / env files.
 
+FIXES APPLIED ON 2026-05-05
+--------------------------
+
+- Fixed Docker port allocation conflicts by changing default service port range from 3001-3999 to 8001-8999 to avoid Next.js dev server conflicts.
+- Enhanced allocatePort() to scan Docker containers for existing port mappings and perform host-level port availability checks.
+- Added retry loop in createService() with automatic cleanup on port failures (up to 10 attempts).
+- Fixed Caddy proxy registration by switching from Cloudflare DNS to 'tls internal' for local development.
+- Added caddyAvailable() health check to avoid noisy error logs when Caddy isn't running.
+
 NEEDS TO BE FINISHED
 --------------------
 - Verify full service creation end-to-end after the latest backend cleanup fix.

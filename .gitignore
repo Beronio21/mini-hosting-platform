@@ -36,3 +36,4 @@ pnpm-debug.log*
 .vscode/
 .DS_Store
 Thumbs.db
+backend/node_modules/ssh2/test/fixtures/id_rsa
