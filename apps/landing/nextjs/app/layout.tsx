@@ -13,11 +13,11 @@ const outfit = Outfit({
 
 export const metadata: Metadata = {
     title: {
-        default: "Pixel.io – Digital Agency Template | PrebuiltUI",
-        template: "%s | Pixel.io",
+        default: "Mini Hosting Platform",
+        template: "%s | Mini Hosting Platform",
     },
     description:
-        "Pixel.io is a modern digital agency template by PrebuiltUI, built for startups and growing businesses. Includes discovery, UI/UX design, development, pricing plans, FAQs, and conversion-focused sections.",
+        "Mini Hosting Platform is a lightweight SaaS host for launching n8n, bot, and API containers behind public subdomains.",
     keywords: [
         "Pixel.io",
         "PrebuiltUI",
@@ -33,19 +33,19 @@ export const metadata: Metadata = {
     publisher: "PrebuiltUI",
 
     openGraph: {
-        title: "Pixel.io – Digital Agency Template by PrebuiltUI",
+        title: "Mini Hosting Platform",
         description:
-            "Launch faster with Pixel.io, a modern digital agency template featuring strategy, design, development, pricing plans, and FAQs.",
-        siteName: "PrebuiltUI",
+            "Launch containerized services with a Next.js dashboard, Docker, and automatic subdomain routing.",
+        siteName: "Mini Hosting Platform",
         type: "website",
     },
 
     twitter: {
         card: "summary_large_image",
-        title: "Pixel.io – Digital Agency Template",
+        title: "Mini Hosting Platform",
         description:
-            "A conversion-focused digital agency template built with Next.js. Perfect for startups, teams, and scalable brands.",
-        creator: "@prebuiltui",
+            "A Next.js + Docker hosting platform for n8n, bots, and APIs.",
+        creator: "@githubcopilot",
     },
 
     robots: {

@@ -1,14 +1,14 @@
 'use client';
 import { MenuIcon, XIcon } from 'lucide-react';
-import { PrimaryButton } from './Buttons';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 
 export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
 
     const navLinks = [
-        { name: 'Home', href: '/#' },
+        { name: 'Home', href: '/#home' },
         { name: 'Features', href: '/#features' },
         { name: 'Pricing', href: '/#pricing' },
         { name: 'FAQ', href: '/#faq' },
@@ -22,7 +22,7 @@ export default function Navbar() {
             transition={{ type: "spring", stiffness: 250, damping: 70, mass: 1 }}
         >
             <div className='max-w-6xl mx-auto flex items-center justify-between bg-black/50 backdrop-blur-md border border-white/4 rounded-2xl p-3'>
-                <a href='/#'>
+                <a href='/#home'>
                     <img src='/logo.svg' alt="logo" className="h-8" />
                 </a>
 
@@ -35,10 +35,12 @@ export default function Navbar() {
                 </div>
 
                 <div className='hidden md:flex items-center gap-3'>
-                    <button className='text-sm font-medium text-gray-300 hover:text-white transition max-sm:hidden'>
+                    <Link href='/login' className='text-sm font-medium text-gray-300 hover:text-white transition max-sm:hidden'>
                         Sign in
-                    </button>
-                    <PrimaryButton className='max-sm:text-xs hidden sm:inline-block'>Get Started</PrimaryButton>
+                    </Link>
+                    <Link href='/register' className='inline-flex items-center justify-center gap-2 rounded-full px-5 py-2 text-sm font-medium bg-linear-to-br from-indigo-500 to-indigo-600 hover:opacity-90 active:scale-95 transition-all max-sm:text-xs hidden sm:inline-flex'>
+                        Get Started
+                    </Link>
                 </div>
 
                 <button onClick={() => setIsOpen(!isOpen)} className='md:hidden'>
@@ -52,10 +54,12 @@ export default function Navbar() {
                     </a>
                 ))}
 
-                <button onClick={() => setIsOpen(false)} className='font-medium text-gray-300 hover:text-white transition'>
+                <Link href='/login' onClick={() => setIsOpen(false)} className='font-medium text-gray-300 hover:text-white transition'>
                     Sign in
-                </button>
-                <PrimaryButton onClick={() => setIsOpen(false)}>Get Started</PrimaryButton>
+                </Link>
+                <Link href='/register' onClick={() => setIsOpen(false)} className='inline-flex items-center justify-center gap-2 rounded-full px-5 py-2 text-sm font-medium bg-linear-to-br from-indigo-500 to-indigo-600 hover:opacity-90 active:scale-95 transition-all'>
+                    Get Started
+                </Link>
 
                 <button
                     onClick={() => setIsOpen(false)}

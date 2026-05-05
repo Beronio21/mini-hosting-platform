@@ -3,7 +3,12 @@ import { SERVICE_TEMPLATES } from "./templates.js";
 import { allocatePort } from "./ports.js";
 import { registerProxyRoute, removeProxyRoute } from "./proxy.js";
 
-const docker = new Docker({ socketPath: "/var/run/docker.sock" });
+// Use TCP port 2375 on Windows, Unix socket on Linux/Mac
+const docker = new Docker(
+  process.platform === "win32"
+    ? { host: "localhost", port: 2375 }
+    : { socketPath: "/var/run/docker.sock" }
+);
 
 export async function createService(
   userId: number,
@@ -14,6 +19,14 @@ export async function createService(
   if (!tpl) throw new Error(`unknown service type: ${type}`);
 
   const port = allocatePort();
+  const containerName = `svc-${userId}-${subdomain}`;
+
+  // Remove any existing container with this name (running or stopped)
+  const existing = await docker.listContainers({ all: true, filters: { name: [containerName] } });
+  if (existing.length > 0) {
+    await docker.getContainer(existing[0].Id).remove({ force: true });
+    console.log(`Removed existing container: ${containerName}`);
+  }
 
   // Pull image if not present (silently warns if already cached)
   try {
@@ -32,7 +45,7 @@ export async function createService(
 
   const container = await docker.createContainer({
     Image: tpl.image,
-    name: `svc-${userId}-${subdomain}`,
+    name: containerName,
     Env: Object.entries(tpl.env(subdomain)).map(([k, v]) => `${k}=${v}`),
     ExposedPorts: { [`${tpl.internalPort}/tcp`]: {} },
     HostConfig: {
