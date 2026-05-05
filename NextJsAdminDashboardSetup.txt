@@ -1,0 +1,39 @@
+┌────────────────────────────────────────────────────────────┐
+│                    USER'S BROWSER                          │
+└──────────────────────────┬─────────────────────────────────┘
+                           │ HTTPS
+                           ▼
+┌────────────────────────────────────────────────────────────┐
+│  NEXT.JS DASHBOARD  (free-nextjs-admin-dashboard-main)     │
+│  - Login / Register                                        │
+│  - Service list                                            │
+│  - "Create Service" wizard                                 │
+│  - Logs viewer                                             │
+└──────────────────────────┬─────────────────────────────────┘
+                           │ REST / fetch
+                           ▼
+┌────────────────────────────────────────────────────────────┐
+│  BACKEND API  (Node.js + Express + TypeScript)             │
+│  - Auth (JWT + bcrypt)                                     │
+│  - Services CRUD                                           │
+│  - Port allocator                                          │
+│  - Dockerode → Docker Engine                               │
+│  - SQLite (via better-sqlite3 or Prisma)                   │
+└──────────────────────────┬─────────────────────────────────┘
+                           │ /var/run/docker.sock
+                           ▼
+┌────────────────────────────────────────────────────────────┐
+│  DOCKER ENGINE                                             │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐                  │
+│  │  n8n     │  │  bot-1   │  │  api-3   │  …               │
+│  │ :3001    │  │ :3002    │  │ :3003    │                  │
+│  └──────────┘  └──────────┘  └──────────┘                  │
+└──────────────────────────┬─────────────────────────────────┘
+                           ▲
+                           │ reverse proxy (subdomain routing)
+                           │
+┌────────────────────────────────────────────────────────────┐
+│  CADDY or NGINX   (auto HTTPS via Let's Encrypt)           │
+│  service1.yourdomain.com → :3001                           │
+│  service2.yourdomain.com → :3002                           │
+└────────────────────────────────────────────────────────────┘

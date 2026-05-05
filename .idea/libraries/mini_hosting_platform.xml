@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="mini-hosting-platform">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/free-nextjs-admin-dashboard-main.zip!/" />
+      <root url="jar://$PROJECT_DIR$/pixel-io-nextjs.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

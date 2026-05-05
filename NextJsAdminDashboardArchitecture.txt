@@ -1,0 +1,25 @@
+mini-hosting-platform/
+├── apps/
+│   ├── dashboard/              ← rename free-nextjs-admin-dashboard-main here
+│   └── landing/                ← rename pixel-io-nextjs here (marketing site)
+├── backend/
+│   ├── src/
+│   │   ├── routes/
+│   │   │   ├── auth.ts
+│   │   │   ├── services.ts
+│   │   │   └── logs.ts
+│   │   ├── docker/
+│   │   │   ├── client.ts       ← dockerode wrapper
+│   │   │   ├── templates.ts    ← n8n/bot/api presets
+│   │   │   └── ports.ts        ← port allocator
+│   │   ├── db/
+│   │   │   ├── schema.sql
+│   │   │   └── index.ts
+│   │   ├── middleware/auth.ts
+│   │   └── server.ts
+│   ├── package.json
+│   └── tsconfig.json
+├── proxy/
+│   └── Caddyfile               ← dynamic reverse proxy
+├── docker-compose.yml          ← runs the platform itself
+└── README.md
