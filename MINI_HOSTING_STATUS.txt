@@ -1,0 +1,57 @@
+MINI HOSTING PLATFORM STATUS
+=============================
+
+Date: 2026-05-05
+Scope: Current project state for the Mini Hosting Platform
+
+RUN LOCATION
+------------
+- Run project commands from the workspace root: `D:\mini-hosting-platform`.
+- Run the backend from the backend project folder when starting or testing server code.
+- Run the dashboard from `D:\mini-hosting-platform\apps\dashboard\free-nextjs-admin-dashboard-main`.
+- Run the landing page from `D:\mini-hosting-platform\apps\landing\nextjs`.
+- Keep Docker Desktop running on the same machine while testing service creation.
+
+APPLIED / ALREADY DONE
+----------------------
+- Backend scaffold exists with Express + TypeScript entrypoint, auth routes, service routes, SQLite setup, and Docker integration.
+- JWT login/register flow is implemented in the backend.
+- Service CRUD endpoints are implemented: list, detail, create, start, stop, delete.
+- Docker client has Windows support for Docker Desktop.
+- Docker client now removes an existing container with the same name before creating a new one.
+- Port allocation is implemented for the service range.
+- Dashboard frontend has login/register and services pages already built.
+- Landing page branding and platform copy were updated.
+- Environment files for backend and dashboard were added.
+- Root docker-compose and Caddy files were added.
+- .gitignore was added for Node.js / Next.js / build outputs / env files.
+
+NEEDS TO BE FINISHED
+--------------------
+- Verify full service creation end-to-end after the latest backend cleanup fix.
+- Keep Docker Desktop and the backend process running together during testing.
+- Confirm Caddy is actually running before relying on proxy route registration.
+- Set up wildcard DNS and real domain records for subdomain access.
+- Validate start/stop/delete actions from the dashboard against real containers.
+- Confirm the dashboard uses the correct API URL and the login/register flow redirects correctly.
+- Add production-ready error handling and user-facing messages for Docker and proxy failures.
+- Add documentation for how to run the dashboard, backend, and proxy together on Windows.
+
+NOT DONE YET
+------------
+- Logs / stdout streaming from containers to the dashboard.
+- Billing / Stripe subscriptions.
+- Full production hardening and deployment automation.
+- Real HTTPS subdomain routing on a live domain.
+- DNS provider token setup and certificate provisioning for production.
+- Automated tests for backend service lifecycle flows.
+
+CURRENT KNOWN RISK / FOLLOW-UP
+-----------------------------
+- A container name conflict can still happen if an old container already exists from a previous attempt; the backend now tries to remove it before creating a new one.
+- Port 3001 conflicts on Windows can still happen if another process is already bound to it.
+- Proxy route registration will fail if Caddy is not running on port 2019.
+
+NEXT BEST CHECK
+---------------
+- Restart the backend, create one service, and confirm the new cleanup logic prevents container-name conflicts.

@@ -3,9 +3,7 @@
 }
 
 *.yourdomain.com {
-  tls {
-    dns cloudflare {env.CF_API_TOKEN}
-  }
+  tls internal
 
   # Caddy API will dynamically add per-subdomain routes above this fallback
   respond "Service not found" 404

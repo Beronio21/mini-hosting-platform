@@ -1,7 +1,21 @@
 const CADDY_ADMIN = "http://localhost:2019";
 const DOMAIN = process.env.DOMAIN || "yourdomain.com";
 
+async function caddyAvailable(): Promise<boolean> {
+  try {
+    const res = await fetch(CADDY_ADMIN, { method: "GET" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 export async function registerProxyRoute(subdomain: string, port: number): Promise<void> {
+  if (!(await caddyAvailable())) {
+    console.info(`Caddy admin not reachable on ${CADDY_ADMIN}; skipping proxy route registration for ${subdomain}`);
+    return;
+  }
+
   const route = {
     "@id": `route-${subdomain}`,
     match: [{ host: [`${subdomain}.${DOMAIN}`] }],
@@ -28,6 +42,11 @@ export async function registerProxyRoute(subdomain: string, port: number): Promi
 }
 
 export async function removeProxyRoute(subdomain: string): Promise<void> {
+  if (!(await caddyAvailable())) {
+    console.info(`Caddy admin not reachable on ${CADDY_ADMIN}; skipping proxy route removal for ${subdomain}`);
+    return;
+  }
+
   const response = await fetch(
     `${CADDY_ADMIN}/id/route-${subdomain}`,
     { method: "DELETE" }
