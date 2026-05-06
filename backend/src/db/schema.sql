@@ -3,6 +3,15 @@ CREATE TABLE IF NOT EXISTS users (
   email        TEXT UNIQUE NOT NULL,
   password     TEXT NOT NULL,
   role         TEXT DEFAULT 'user' CHECK(role IN ('user','admin','suspended')),
+  first_name   TEXT,
+  last_name    TEXT,
+  phone        TEXT,
+  bio          TEXT,
+  address      TEXT,
+  country      TEXT,
+  city_state   TEXT,
+  postal_code  TEXT,
+  tax_id       TEXT,
   created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

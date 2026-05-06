@@ -42,6 +42,82 @@ router.post("/users/:id/suspend", (req: AuthRequest, res: Response) => {
   res.json({ suspended: true });
 });
 
+// POST /api/admin/users/:id/activate — reactivate suspended user
+router.post("/users/:id/activate", (req: AuthRequest, res: Response) => {
+  const result = db.prepare("UPDATE users SET role = 'user' WHERE id = ?").run(req.params.id);
+  if (result.changes === 0) {
+    res.status(404).json({ error: "user not found" });
+    return;
+  }
+  res.json({ activated: true });
+});
+
+// PUT /api/admin/users/:id/role — change user role
+router.put("/users/:id/role", (req: AuthRequest, res: Response) => {
+  const { role } = req.body;
+  if (!role || !['user', 'admin', 'suspended'].includes(role)) {
+    res.status(400).json({ error: "invalid role. Must be 'user', 'admin', or 'suspended'" });
+    return;
+  }
+  
+  const result = db.prepare("UPDATE users SET role = ? WHERE id = ?").run(role, req.params.id);
+  if (result.changes === 0) {
+    res.status(404).json({ error: "user not found" });
+    return;
+  }
+  res.json({ role_changed: true, new_role: role });
+});
+
+// POST /api/admin/users — create new user by admin
+router.post("/users", async (req: AuthRequest, res: Response) => {
+  const { email, password, role = 'user' } = req.body;
+  
+  if (!email || !password) {
+    res.status(400).json({ error: "email and password are required" });
+    return;
+  }
+  
+  if (!['user', 'admin', 'suspended'].includes(role)) {
+    res.status(400).json({ error: "invalid role" });
+    return;
+  }
+  
+  const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(email);
+  if (existing) {
+    res.status(409).json({ error: "email already registered" });
+    return;
+  }
+  
+  try {
+    const bcrypt = await import('bcrypt');
+    const hash = await bcrypt.hash(password, 10);
+    const result = db.prepare("INSERT INTO users (email, password, role) VALUES (?, ?, ?)").run(email, hash, role);
+    
+    res.status(201).json({ 
+      id: result.lastInsertRowid,
+      email,
+      role,
+      message: "user created successfully"
+    });
+  } catch (error) {
+    res.status(500).json({ error: "failed to create user" });
+  }
+});
+
+// DELETE /api/admin/users/:id — delete user
+router.delete("/users/:id", (req: AuthRequest, res: Response) => {
+  // First delete user's services
+  db.prepare("DELETE FROM services WHERE user_id = ?").run(req.params.id);
+  
+  // Then delete user
+  const result = db.prepare("DELETE FROM users WHERE id = ?").run(req.params.id);
+  if (result.changes === 0) {
+    res.status(404).json({ error: "user not found" });
+    return;
+  }
+  res.json({ deleted: true });
+});
+
 // GET /api/admin/earnings — view platform earnings
 router.get("/earnings", (req: AuthRequest, res: Response) => {
   const totalEarnings = db

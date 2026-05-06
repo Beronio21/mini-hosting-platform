@@ -7,19 +7,49 @@ import { db } from "../db/index.js";
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET!;
 
-const authSchema = z.object({
+const registerSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  phone: z.string().optional(),
+  bio: z.string().optional(),
+  address: z.string().optional(),
+  country: z.string().optional(),
+  cityState: z.string().optional(),
+  postalCode: z.string().optional(),
+  taxId: z.string().optional(),
+});
+
+const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
 });
 
 router.post("/register", async (req: Request, res: Response) => {
-  const parsed = authSchema.safeParse(req.body);
+  const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.flatten() });
+    const errors = parsed.error.flatten();
+    const errorMessages = Object.entries(errors.fieldErrors || {})
+      .map(([field, msgs]) => `${field}: ${msgs?.join(", ") || "invalid"}`)
+      .join("; ") || "Validation failed";
+    res.status(400).json({ error: errorMessages });
     return;
   }
 
-  const { email, password } = parsed.data;
+  const {
+    email,
+    password,
+    firstName,
+    lastName,
+    phone,
+    bio,
+    address,
+    country,
+    cityState,
+    postalCode,
+    taxId,
+  } = parsed.data;
 
   const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(email);
   if (existing) {
@@ -28,14 +58,18 @@ router.post("/register", async (req: Request, res: Response) => {
   }
 
   const hash = await bcrypt.hash(password, 10);
-  const result = db.prepare("INSERT INTO users (email, password) VALUES (?, ?)").run(email, hash);
-  const token = jwt.sign({ id: result.lastInsertRowid, role: 'user' }, JWT_SECRET, { expiresIn: "7d" });
+  const result = db
+    .prepare(
+      `INSERT INTO users (email, password, first_name, last_name, phone, bio, address, country, city_state, postal_code, tax_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(email, hash, firstName, lastName, phone, bio || null, address, country, cityState, postalCode, taxId);
+  const token = jwt.sign({ id: result.lastInsertRowid, role: "user" }, JWT_SECRET, { expiresIn: "7d" });
 
-  res.status(201).json({ token, userId: result.lastInsertRowid, role: 'user' });
+  res.status(201).json({ token, userId: result.lastInsertRowid, role: "user" });
 });
 
 router.post("/login", async (req: Request, res: Response) => {
-  const parsed = authSchema.safeParse(req.body);
+  const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.flatten() });
     return;
@@ -49,8 +83,45 @@ router.post("/login", async (req: Request, res: Response) => {
     return;
   }
 
-  const token = jwt.sign({ id: user.id, role: user.role || 'user' }, JWT_SECRET, { expiresIn: "7d" });
-  res.json({ token, userId: user.id, role: user.role || 'user' });
+  const token = jwt.sign({ id: user.id, role: user.role || "user" }, JWT_SECRET, { expiresIn: "7d" });
+  res.json({ token, userId: user.id, role: user.role || "user" });
+});
+
+router.get("/profile", (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    res.status(401).json({ error: "missing authorization header" });
+    return;
+  }
+
+  const token = authHeader.replace("Bearer ", "");
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: number };
+    const user = db.prepare("SELECT id, email, first_name, last_name, phone, bio, address, country, city_state, postal_code, tax_id, role FROM users WHERE id = ?").get(decoded.id) as any;
+    
+    if (!user) {
+      res.status(404).json({ error: "user not found" });
+      return;
+    }
+
+    res.json({
+      id: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      phone: user.phone,
+      bio: user.bio,
+      address: user.address,
+      country: user.country,
+      cityState: user.city_state,
+      postalCode: user.postal_code,
+      taxId: user.tax_id,
+      role: user.role,
+    });
+  } catch (err: any) {
+    res.status(401).json({ error: "invalid token" });
+  }
 });
 
 export default router;
+

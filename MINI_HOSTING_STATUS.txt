@@ -1,7 +1,7 @@
 MINI HOSTING PLATFORM STATUS
 =============================
 
-Date: 2026-05-05
+Date: 2026-05-06
 Scope: Current project state for the Mini Hosting Platform
 
 RUN LOCATION
@@ -25,6 +25,25 @@ APPLIED / ALREADY DONE
 - Environment files for backend and dashboard were added.
 - Root docker-compose and Caddy files were added.
 - .gitignore was added for Node.js / Next.js / build outputs / env files.
+
+SUPABASE SETUP (2026-05-06)
+---------------------------
+- Supabase PostgreSQL added for database management.
+- Supabase config file: `supabase/config.toml`
+- Supabase Studio URL: http://127.0.0.1:54323
+- Supabase API URL: http://127.0.0.1:54321
+- Supabase Database URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+- Supabase Auth enabled with email signup.
+- To start Supabase locally: `supabase start`
+- To stop Supabase: `supabase stop`
+
+REGISTER FIX (2026-05-06)
+-------------------------
+- Fixed registration validation requiring too many fields.
+- Backend now accepts optional fields: firstName, lastName, phone, bio, address, country, cityState, postalCode, taxId.
+- Registration now works with just email and password.
+- Frontend register page updated to use AuthContext for auto-login after registration.
+- Backend registration inserts default 'user' role for new accounts.
 
 FIXES APPLIED ON 2026-05-05
 --------------------------
@@ -147,6 +166,92 @@ FUTURE PUBLIC APIs (for landing page):
 - GET /api/public/plans    - Available service plans/pricing
 - GET /api/public/features - Platform features
 - GET /api/public/status   - Platform status page
+
+TWO-STEP REGISTRATION WORKFLOW IMPLEMENTATION (2026-05-06)
+-----------------------------------------------------------
+**[PRIORITY]** Restart Next.js dev server to deploy two-step registration changes
+- **[PRIORITY]** Test two-step registration flow end-to-end after server restart
+- 
+ISSUE IDENTIFIED:
+- Registration form was collecting all profile fields (firstName, lastName, phone, address, country, cityState, postalCode, taxId, bio) on a single page
+- User requirement: two-step registration process - Step 1 (email/password only) then Step 2 (profile completion)
+- Error display issue: showing validation errors for missing profile fields before user reaches Step 2
+
+IMPLEMENTATION COMPLETED:
+- Created new two-step registration flow:
+  * Step 1 (SignUpForm.tsx): Email input, Password input, Confirm password checkbox, Terms checkbox
+    - Button: "Create Account" 
+    - Stores credentials to sessionStorage (tempEmail, tempPassword)
+    - Redirects to /full-width-pages/auth/complete-profile
+  * Step 2 (CompleteProfileForm.tsx): All profile fields collected here
+    - Loads credentials from sessionStorage
+    - Displays form with: firstName, lastName, phone, bio, address, country, cityState, postalCode, taxId
+    - Button: "Complete Registration"
+    - Calls /api/auth/register with all data (email, password + profile fields)
+    - Stores JWT token and redirects to /dashboard/services
+  * New route created: /full-width-pages/auth/complete-profile/page.tsx
+
+FILES MODIFIED:
+- SignUpForm.tsx - Restructured for Step 1 only (email + password)
+- CompleteProfileForm.tsx - NEW file for Step 2 (profile details)
+- /full-width-pages/auth/complete-profile/page.tsx - NEW route page
+
+BACKEND SUPPORT:
+- /api/auth/register endpoint already supports all profile fields
+- No backend changes required (already implemented in previous session)
+
+STATUS:
+- Code changes complete with no TypeScript errors
+- PENDING: Dev server restart to deploy changes
+- PENDING: Testing two-step flow in browser after restart
+
+NEXT ACTION:
+1. Restart Next.js dev server (Ctrl+C then npm run dev)
+2. Hard refresh browser (Ctrl+Shift+R)
+3. Test registration flow:
+   - Step 1: Enter email & password, click "Create Account"
+   - Should redirect to profile completion page
+   - Step 2: Fill profile info, click "Complete Registration"
+   - Should create account and redirect to dashboard
+
+SUPABASE LOCAL SETUP (2026-05-06)
+---------------------------------
+
+SUPABASE INITIALIZATION:
+- Supabase project initialized locally via `supabase init`
+- Configuration location: D:\mini-hosting-platform\supabase\config.toml
+- Local services configuration:
+  * Database (PostgreSQL 17): localhost:54322
+  * API (PostgREST): localhost:54321
+  * Studio (Web UI): localhost:54323
+  * Auth service configured
+  * Storage service configured
+
+DATABASE MIGRATION PLAN:
+- Current backend uses: SQLite (better-sqlite3) for local development
+- Target migration: PostgreSQL via Supabase (for production)
+- Migration timeline: Post-launch as nice-to-have upgrade
+- No immediate changes to backend code required
+
+SUPABASE USAGE STATUS:
+- INITIALIZED: Local Supabase project structure in place
+- PENDING: Start local Supabase services when ready to test (`supabase start`)
+- PENDING: Migrate backend from SQLite to Supabase PostgreSQL
+- PENDING: Update backend connection code to use Supabase client (pg or Prisma)
+- PENDING: Migrate existing user and service data from SQLite to Postgres
+
+HOW TO START SUPABASE LOCALLY:
+1. Navigate to: D:\mini-hosting-platform\supabase
+2. Run: `supabase start`
+3. Services will be available at:
+   - Database: postgres://postgres:postgres@localhost:54322/postgres
+   - Studio: http://localhost:54323
+
+NEXT ACTIONS FOR SUPABASE:
+1. Run full end-to-end tests with SQLite before migrating
+2. Plan data migration strategy for existing users/services
+3. Update backend routes to use Supabase client
+4. Test production deployment with Supabase hosted database
 
 NEEDS TO BE FINISHED
 --------------------

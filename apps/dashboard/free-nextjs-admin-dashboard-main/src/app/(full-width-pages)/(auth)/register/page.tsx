@@ -3,15 +3,17 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { apiCall } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 
 type RegisterResponse = {
   token: string;
   userId: number;
+  role: string;
 };
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { login, user, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -19,10 +21,10 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('token')) {
+    if (!isLoading && user) {
       router.replace('/dashboard/services');
     }
-  }, [router]);
+  }, [user, isLoading, router]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -36,12 +38,27 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const result = await apiCall<RegisterResponse>('/api/auth/register', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/auth/register`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ email, password }),
       });
-      localStorage.setItem('token', result.token);
-      router.replace('/dashboard/services');
+
+      if (response.ok) {
+        const data: RegisterResponse = await response.json();
+        // Auto-login after successful registration
+        const loginSuccess = await login(email, password);
+        if (loginSuccess) {
+          router.replace('/dashboard/services');
+        } else {
+          setError('Registration successful but login failed. Please try logging in.');
+        }
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Registration failed');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to create account');
     } finally {

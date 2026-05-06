@@ -1,18 +1,58 @@
 "use client";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useModal } from "../../hooks/useModal";
 import { Modal } from "../ui/modal";
 import Button from "../ui/button/Button";
 import Input from "../form/input/InputField";
 import Label from "../form/Label";
+import { apiCall } from "@/lib/api";
+
+interface UserProfile {
+  id: number;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  bio?: string;
+  address?: string;
+  country?: string;
+  cityState?: string;
+  postalCode?: string;
+  taxId?: string;
+  role?: string;
+}
 
 export default function UserInfoCard() {
   const { isOpen, openModal, closeModal } = useModal();
-  const handleSave = () => {
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const data = await apiCall<UserProfile>("/api/auth/profile");
+      setProfile(data);
+    } catch (err: any) {
+      setError(err.message || "Failed to load profile");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
     // Handle save logic here
     console.log("Saving changes...");
     closeModal();
   };
+
+  if (loading) return <div className="p-5 text-gray-500">Loading profile...</div>;
+  if (error) return <div className="p-5 text-red-500">Error: {error}</div>;
+  if (!profile) return <div className="p-5 text-gray-500">No profile found</div>;
+
   return (
     <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
@@ -27,7 +67,7 @@ export default function UserInfoCard() {
                 First Name
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                Musharof
+                {profile.firstName || "—"}
               </p>
             </div>
 
@@ -36,7 +76,7 @@ export default function UserInfoCard() {
                 Last Name
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                Chowdhury
+                {profile.lastName || "—"}
               </p>
             </div>
 
@@ -45,7 +85,7 @@ export default function UserInfoCard() {
                 Email address
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                randomuser@pimjo.com
+                {profile.email}
               </p>
             </div>
 
@@ -54,7 +94,7 @@ export default function UserInfoCard() {
                 Phone
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                +09 363 398 46
+                {profile.phone || "—"}
               </p>
             </div>
 
@@ -63,7 +103,7 @@ export default function UserInfoCard() {
                 Bio
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                Team Manager
+                {profile.bio || "—"}
               </p>
             </div>
           </div>
@@ -104,42 +144,6 @@ export default function UserInfoCard() {
           </div>
           <form className="flex flex-col">
             <div className="custom-scrollbar h-[450px] overflow-y-auto px-2 pb-3">
-              <div>
-                <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
-                  Social Links
-                </h5>
-
-                <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
-                  <div>
-                    <Label>Facebook</Label>
-                    <Input
-                      type="text"
-                      defaultValue="https://www.facebook.com/PimjoHQ"
-                    />
-                  </div>
-
-                  <div>
-                    <Label>X.com</Label>
-                    <Input type="text" defaultValue="https://x.com/PimjoHQ" />
-                  </div>
-
-                  <div>
-                    <Label>Linkedin</Label>
-                    <Input
-                      type="text"
-                      defaultValue="https://www.linkedin.com/company/pimjo"
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Instagram</Label>
-                    <Input
-                      type="text"
-                      defaultValue="https://instagram.com/PimjoHQ"
-                    />
-                  </div>
-                </div>
-              </div>
               <div className="mt-7">
                 <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
                   Personal Information
@@ -148,27 +152,52 @@ export default function UserInfoCard() {
                 <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
                   <div className="col-span-2 lg:col-span-1">
                     <Label>First Name</Label>
-                    <Input type="text" defaultValue="Musharof" />
+                    <Input type="text" defaultValue={profile.firstName || ""} />
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
                     <Label>Last Name</Label>
-                    <Input type="text" defaultValue="Chowdhury" />
+                    <Input type="text" defaultValue={profile.lastName || ""} />
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
                     <Label>Email Address</Label>
-                    <Input type="text" defaultValue="randomuser@pimjo.com" />
+                    <Input type="text" disabled defaultValue={profile.email} />
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
                     <Label>Phone</Label>
-                    <Input type="text" defaultValue="+09 363 398 46" />
+                    <Input type="text" defaultValue={profile.phone || ""} />
                   </div>
 
                   <div className="col-span-2">
                     <Label>Bio</Label>
-                    <Input type="text" defaultValue="Team Manager" />
+                    <Input type="text" defaultValue={profile.bio || ""} />
+                  </div>
+
+                  <div className="col-span-2">
+                    <Label>Address</Label>
+                    <Input type="text" defaultValue={profile.address || ""} />
+                  </div>
+
+                  <div className="col-span-2 lg:col-span-1">
+                    <Label>Country</Label>
+                    <Input type="text" defaultValue={profile.country || ""} />
+                  </div>
+
+                  <div className="col-span-2 lg:col-span-1">
+                    <Label>City/State</Label>
+                    <Input type="text" defaultValue={profile.cityState || ""} />
+                  </div>
+
+                  <div className="col-span-2 lg:col-span-1">
+                    <Label>Postal Code</Label>
+                    <Input type="text" defaultValue={profile.postalCode || ""} />
+                  </div>
+
+                  <div className="col-span-2 lg:col-span-1">
+                    <Label>TAX ID</Label>
+                    <Input type="text" defaultValue={profile.taxId || ""} />
                   </div>
                 </div>
               </div>
