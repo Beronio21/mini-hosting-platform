@@ -231,6 +231,7 @@ app.use(express.json());
 // Routes
 app.use("/api/auth", authRouter);
 app.use("/api/services", servicesRouter);
+app.use("/api/admin", adminRouter);
 
 // Health check
 app.get("/api/health", (_req, res) => {
@@ -255,6 +256,7 @@ CREATE TABLE IF NOT EXISTS users (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
   email        TEXT UNIQUE NOT NULL,
   password     TEXT NOT NULL,
+  role         TEXT DEFAULT 'user' CHECK(role IN ('user','admin')),
   created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -269,6 +271,32 @@ CREATE TABLE IF NOT EXISTS services (
   status        TEXT DEFAULT 'stopped' CHECK(status IN ('running','stopped','error')),
   created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS payments (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id       INTEGER NOT NULL,
+  amount        DECIMAL(10,2) NOT NULL,
+  currency      TEXT DEFAULT 'USD',
+  status        TEXT DEFAULT 'pending' CHECK(status IN ('pending','completed','failed')),
+  payment_method TEXT,
+  stripe_payment_id TEXT UNIQUE,
+  period_start  DATETIME NOT NULL,
+  period_end    DATETIME NOT NULL,
+  created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS service_usage (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  service_id    INTEGER NOT NULL,
+  cpu_hours     DECIMAL(10,4) DEFAULT 0,
+  memory_gb_hours DECIMAL(10,4) DEFAULT 0,
+  cost          DECIMAL(10,4) DEFAULT 0,
+  period_start  DATETIME NOT NULL,
+  period_end    DATETIME NOT NULL,
+  created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (service_id) REFERENCES services(id)
 );
 
 ================================================================================
@@ -317,6 +345,7 @@ const JWT_SECRET = process.env.JWT_SECRET!;
 
 export interface AuthRequest extends Request {
   userId?: number;
+  userRole?: string;
 }
 
 export function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
@@ -327,8 +356,9 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
   }
 
   try {
-    const payload = jwt.verify(header.slice(7), JWT_SECRET) as { id: number };
+    const payload = jwt.verify(header.slice(7), JWT_SECRET) as { id: number; role?: string };
     req.userId = payload.id;
+    req.userRole = payload.role || 'user';
     next();
   } catch {
     res.status(401).json({ error: "invalid token" });
@@ -372,9 +402,9 @@ router.post("/register", async (req: Request, res: Response) => {
 
   const hash = await bcrypt.hash(password, 10);
   const result = db.prepare("INSERT INTO users (email, password) VALUES (?, ?)").run(email, hash);
-  const token = jwt.sign({ id: result.lastInsertRowid }, JWT_SECRET, { expiresIn: "7d" });
+  const token = jwt.sign({ id: result.lastInsertRowid, role: 'user' }, JWT_SECRET, { expiresIn: "7d" });
 
-  res.status(201).json({ token, userId: result.lastInsertRowid });
+  res.status(201).json({ token, userId: result.lastInsertRowid, role: 'user' });
 });
 
 router.post("/login", async (req: Request, res: Response) => {
@@ -392,8 +422,8 @@ router.post("/login", async (req: Request, res: Response) => {
     return;
   }
 
-  const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: "7d" });
-  res.json({ token, userId: user.id });
+  const token = jwt.sign({ id: user.id, role: user.role || 'user' }, JWT_SECRET, { expiresIn: "7d" });
+  res.json({ token, userId: user.id, role: user.role || 'user' });
 });
 
 export default router;
@@ -541,6 +571,123 @@ router.delete("/:id", async (req: AuthRequest, res: Response) => {
     console.error("Failed to delete service:", err);
     res.status(500).json({ error: "failed to delete service" });
   }
+});
+
+export default router;
+
+================================================================================
+  13.5. BACKEND — src/routes/admin.ts
+  FILE: backend/src/routes/admin.ts
+================================================================================
+
+import { Router, Response } from "express";
+import { db } from "../db/index.js";
+import { requireAuth, AuthRequest } from "../middleware/auth.js";
+
+const router = Router();
+router.use(requireAuth);
+
+// Admin-only middleware
+function requireAdmin(req: AuthRequest, res: Response, next: any) {
+  const user = db.prepare("SELECT role FROM users WHERE id = ?").get(req.userId) as any;
+  if (!user || user.role !== 'admin') {
+    res.status(403).json({ error: "admin access required" });
+    return;
+  }
+  next();
+}
+router.use(requireAdmin);
+
+// GET /api/admin/users — list all users
+router.get("/users", (_req: AuthRequest, res: Response) => {
+  const users = db
+    .prepare("SELECT id, email, role, created_at FROM users ORDER BY created_at DESC")
+    .all();
+  res.json({ users });
+});
+
+// GET /api/admin/users/:id — get user details with services
+router.get("/users/:id", (req: AuthRequest, res: Response) => {
+  const user = db
+    .prepare("SELECT id, email, role, created_at FROM users WHERE id = ?")
+    .get(req.params.id) as any;
+  
+  if (!user) {
+    res.status(404).json({ error: "user not found" });
+    return;
+  }
+
+  const services = db
+    .prepare("SELECT id, name, type, status, created_at FROM services WHERE user_id = ?")
+    .all(req.params.id);
+
+  res.json({ user, services });
+});
+
+// POST /api/admin/users/:id/suspend — suspend user
+router.post("/users/:id/suspend", (req: AuthRequest, res: Response) => {
+  const result = db.prepare("UPDATE users SET role = 'suspended' WHERE id = ?").run(req.params.id);
+  if (result.changes === 0) {
+    res.status(404).json({ error: "user not found" });
+    return;
+  }
+  res.json({ suspended: true });
+});
+
+// GET /api/admin/earnings — view platform earnings
+router.get("/earnings", (req: AuthRequest, res: Response) => {
+  const totalEarnings = db
+    .prepare("SELECT SUM(amount) as total FROM payments WHERE status = 'completed'")
+    .get() as any;
+  
+  const monthlyEarnings = db
+    .prepare(`
+      SELECT strftime('%Y-%m', created_at) as month, 
+             SUM(amount) as earnings,
+             COUNT(*) as payments
+      FROM payments 
+      WHERE status = 'completed' 
+      GROUP BY strftime('%Y-%m', created_at) 
+      ORDER BY month DESC 
+      LIMIT 12
+    `).all();
+
+  res.json({ 
+    totalEarnings: totalEarnings.total || 0,
+    monthlyEarnings 
+  });
+});
+
+// GET /api/admin/metrics — system metrics
+router.get("/metrics", (_req: AuthRequest, res: Response) => {
+  const totalUsers = db.prepare("SELECT COUNT(*) as count FROM users").get() as any;
+  const totalServices = db.prepare("SELECT COUNT(*) as count FROM services").get() as any;
+  const runningServices = db.prepare("SELECT COUNT(*) as count FROM services WHERE status = 'running'").get() as any;
+  
+  const servicesByType = db
+    .prepare("SELECT type, COUNT(*) as count FROM services GROUP BY type")
+    .all();
+
+  res.json({
+    totalUsers: totalUsers.count,
+    totalServices: totalServices.count,
+    runningServices: runningServices.count,
+    servicesByType
+  });
+});
+
+// GET /api/admin/services — all services (admin view)
+router.get("/services", (_req: AuthRequest, res: Response) => {
+  const services = db
+    .prepare(`
+      SELECT s.id, s.name, s.type, s.status, s.created_at,
+             u.email as user_email
+      FROM services s
+      JOIN users u ON s.user_id = u.id
+      ORDER BY s.created_at DESC
+    `).all();
+  
+  res.json({ services });
 });
 
 export default router;
@@ -888,6 +1035,41 @@ PAGE: /dashboard/services/[id]
   - Start / Stop / Delete buttons
   - Calls GET /api/services/:id
   - Future: add log viewer here (WebSocket)
+
+ADMIN PAGES (only visible to users with role='admin'):
+
+PAGE: /admin/users
+  - Table listing all users
+  - Columns: email, role, created_at, actions
+  - Each row has "View Details" and "Suspend" buttons
+  - Calls GET /api/admin/users on mount
+
+PAGE: /admin/users/[id]
+  - Shows user details with their services
+  - User info: email, role, created_at
+  - Services table: name, type, status, created_at
+  - Suspend/Reactivate user button
+  - Calls GET /api/admin/users/:id on mount
+
+PAGE: /admin/earnings
+  - Dashboard showing platform earnings
+  - Total earnings card
+  - Monthly earnings chart
+  - Recent payments table
+  - Calls GET /api/admin/earnings on mount
+
+PAGE: /admin/metrics
+  - System metrics dashboard
+  - Total users, services, running services cards
+  - Services by type chart
+  - Resource usage overview
+  - Calls GET /api/admin/metrics on mount
+
+PAGE: /admin/services
+  - All services across all users
+  - Columns: name, type, status, user_email, created_at
+  - Filter by user or service type
+  - Calls GET /api/admin/services on mount
 
 ================================================================================
   23. BUILD ORDER (MVP PHASES)

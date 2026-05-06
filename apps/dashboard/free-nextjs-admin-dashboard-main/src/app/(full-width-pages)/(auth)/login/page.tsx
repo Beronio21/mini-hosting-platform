@@ -3,25 +3,21 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { apiCall } from '@/lib/api';
-
-type LoginResponse = {
-  token: string;
-  userId: number;
-};
+import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login, user, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('token')) {
+    if (!isLoading && user) {
       router.replace('/dashboard/services');
     }
-  }, [router]);
+  }, [user, isLoading, router]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -29,12 +25,12 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const result = await apiCall<LoginResponse>('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
-      });
-      localStorage.setItem('token', result.token);
-      router.replace('/dashboard/services');
+      const success = await login(email, password);
+      if (success) {
+        router.replace('/dashboard/services');
+      } else {
+        setError('Invalid credentials');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to sign in');
     } finally {

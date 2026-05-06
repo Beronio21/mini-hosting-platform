@@ -29,9 +29,9 @@ router.post("/register", async (req: Request, res: Response) => {
 
   const hash = await bcrypt.hash(password, 10);
   const result = db.prepare("INSERT INTO users (email, password) VALUES (?, ?)").run(email, hash);
-  const token = jwt.sign({ id: result.lastInsertRowid }, JWT_SECRET, { expiresIn: "7d" });
+  const token = jwt.sign({ id: result.lastInsertRowid, role: 'user' }, JWT_SECRET, { expiresIn: "7d" });
 
-  res.status(201).json({ token, userId: result.lastInsertRowid });
+  res.status(201).json({ token, userId: result.lastInsertRowid, role: 'user' });
 });
 
 router.post("/login", async (req: Request, res: Response) => {
@@ -49,8 +49,8 @@ router.post("/login", async (req: Request, res: Response) => {
     return;
   }
 
-  const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: "7d" });
-  res.json({ token, userId: user.id });
+  const token = jwt.sign({ id: user.id, role: user.role || 'user' }, JWT_SECRET, { expiresIn: "7d" });
+  res.json({ token, userId: user.id, role: user.role || 'user' });
 });
 
 export default router;

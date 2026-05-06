@@ -35,6 +35,119 @@ FIXES APPLIED ON 2026-05-05
 - Fixed Caddy proxy registration by switching from Cloudflare DNS to 'tls internal' for local development.
 - Added caddyAvailable() health check to avoid noisy error logs when Caddy isn't running.
 
+ADMIN ROLE SYSTEM IMPLEMENTATION (2026-05-05)
+---------------------------------------------
+
+- Enhanced database schema with role-based user system (user/admin/suspended roles)
+- Added payments and service_usage tables for billing and earnings tracking
+- Updated JWT tokens to include user role for frontend permission checks
+- Created admin API routes for user management, earnings viewing, and system metrics
+- Added admin-only middleware to protect sensitive endpoints
+- Designed admin dashboard pages for business operations (earnings, users, metrics)
+- Updated blueprint with complete admin role architecture and API specifications
+- Built complete admin dashboard frontend with role-based navigation
+- Created authentication context for frontend role management
+- Added admin pages: /admin/users, /admin/earnings, /admin/metrics, /admin/services
+
+LOGIN INFORMATION (2026-05-05)
+------------------------------
+
+ADMIN LOGIN:
+- URL: http://localhost:3000/full-width-pages/auth/login
+- Email: admin@example.com
+- Password: admin123
+- Access: Full admin dashboard with user management, earnings, metrics, and all services view
+
+REGULAR USER LOGIN:
+- URL: http://localhost:3000/full-width-pages/auth/login
+- Register new account or use existing credentials
+- Access: Personal services dashboard only (no admin features)
+
+DASHBOARD ACCESS:
+- Admin users see "Admin" section in sidebar with management tools
+- Regular users only see standard dashboard features
+- Role-based UI rendering ensures proper access control
+
+PERMISSION SYSTEM (2026-05-05)
+-----------------------------
+
+ADMIN PERMISSIONS:
+API Access:
+- GET /api/admin/users - View all users
+- GET /api/admin/users/:id - View user details with services  
+- POST /api/admin/users/:id/suspend - Suspend users
+- GET /api/admin/earnings - View platform earnings
+- GET /api/admin/metrics - System metrics and statistics
+- GET /api/admin/services - View ALL services across all users
+
+Dashboard Access:
+- /admin/users - User management interface
+- /admin/earnings - Revenue tracking dashboard
+- /admin/metrics - System statistics
+- /admin/services - All services with search/filter
+- Standard user services (can manage their own too)
+
+CLIENT (REGULAR USER) PERMISSIONS:
+API Access:
+- POST /api/auth/login - Own authentication
+- POST /api/auth/register - Own registration
+- GET /api/services - View ONLY their services
+- POST /api/services - Create services (own account)
+- POST /api/services/:id/start - Start ONLY their services
+- POST /api/services/:id/stop - Stop ONLY their services
+- DELETE /api/services/:id - Delete ONLY their services
+- BLOCKED: All /api/admin/* routes
+
+Dashboard Access:
+- /dashboard/services - Their services only
+- /dashboard/services/new - Create new service
+- /dashboard/services/[id] - Their service details
+- BLOCKED: All /admin/* pages (not visible)
+
+SECURITY ENFORCEMENT:
+- JWT tokens include role (user/admin)
+- requireAdmin() middleware protects admin routes
+- Service queries filtered by user_id
+- Frontend hides admin navigation for regular users
+
+API REQUIREMENTS (2026-05-05)
+-----------------------------
+
+CURRENT ENDPOINTS:
+Authentication APIs:
+- POST /api/auth/register    - User registration
+- POST /api/auth/login       - User login (returns JWT with role)
+
+User Service APIs:
+- GET    /api/services           - Get user's services only
+- POST   /api/services           - Create new service
+- POST   /api/services/:id/start - Start user's service
+- POST   /api/services/:id/stop  - Stop user's service
+- DELETE /api/services/:id       - Delete user's service
+- GET    /api/services/:id       - Get service details
+
+Admin APIs (admin only):
+- GET  /api/admin/users           - List all users
+- GET  /api/admin/users/:id       - Get user details with services
+- POST /api/admin/users/:id/suspend - Suspend user
+- GET  /api/admin/earnings        - View platform earnings
+- GET  /api/admin/metrics         - System metrics
+- GET  /api/admin/services        - All services across platform
+
+Utility API:
+- GET /api/health - Backend health check
+
+SETUP DETAILS:
+- Backend URL: http://localhost:4000
+- Authentication: Bearer JWT tokens in Authorization header
+- Role-based: Admin endpoints blocked for regular users
+- Landing page (localhost:3002): Currently no APIs needed (marketing only)
+
+FUTURE PUBLIC APIs (for landing page):
+- GET /api/public/plans    - Available service plans/pricing
+- GET /api/public/features - Platform features
+- GET /api/public/status   - Platform status page
+
 NEEDS TO BE FINISHED
 --------------------
 - Verify full service creation end-to-end after the latest backend cleanup fix.

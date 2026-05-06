@@ -4,6 +4,7 @@ import cors from "cors";
 import { initDb } from "./db/index.js";
 import authRouter from "./routes/auth.js";
 import servicesRouter from "./routes/services.js";
+import adminRouter from "./routes/admin.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
@@ -15,6 +16,7 @@ app.use(express.json());
 // Routes
 app.use("/api/auth", authRouter);
 app.use("/api/services", servicesRouter);
+app.use("/api/admin", adminRouter);
 
 // Health check
 app.get("/api/health", (_req, res) => {
