@@ -1,15 +1,16 @@
 "use client";
 
-import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import { ChevronLeftIcon } from "@/icons";
 import { apiCall } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
 export default function CompleteProfileForm() {
   const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -34,7 +35,7 @@ export default function CompleteProfileForm() {
 
     if (!tempEmail || !tempPassword) {
       // No credentials found, redirect back to signup
-      router.push("/signin");
+      router.push("/login");
       return;
     }
 
@@ -74,9 +75,15 @@ export default function CompleteProfileForm() {
         sessionStorage.removeItem("tempEmail");
         sessionStorage.removeItem("tempPassword");
 
-        // Store token and redirect to dashboard
-        localStorage.setItem("token", res.token);
-        window.location.href = "/dashboard/services";
+        // Auto-login using AuthContext
+        const loginSuccess = await login(email, password);
+        if (loginSuccess) {
+          router.replace("/dashboard/services");
+        } else {
+          // Fallback: store token manually
+          localStorage.setItem("token", res.token);
+          window.location.href = "/dashboard/services";
+        }
       }
     } catch (err: any) {
       let msg = "Registration failed";
@@ -96,7 +103,7 @@ export default function CompleteProfileForm() {
     <div className="flex flex-col flex-1 lg:w-1/2 w-full overflow-y-auto no-scrollbar">
       <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
         <Link
-          href="/signin"
+          href="/login"
           className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
         >
           <ChevronLeftIcon />
@@ -107,7 +114,7 @@ export default function CompleteProfileForm() {
         <div>
           <div className="mb-8">
             <h1 className="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
-              Complete Your Profile
+              Complete Your Profile - Step 2 of 2
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Please fill in your profile information to complete your account setup.
@@ -124,28 +131,28 @@ export default function CompleteProfileForm() {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <Label>
-                      First Name<span className="text-error-500">*</span>
+                      First Name (Optional)
                     </Label>
-                    <Input
+                    <input
                       type="text"
                       name="firstName"
                       placeholder="First name"
                       value={formData.firstName}
                       onChange={handleInputChange}
-                      required
+                      className="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-3 text-sm shadow-theme-xs placeholder:text-gray-400 focus:outline-hidden focus:ring-3 focus:border-brand-300 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                     />
                   </div>
                   <div>
                     <Label>
-                      Last Name<span className="text-error-500">*</span>
+                      Last Name (Optional)
                     </Label>
-                    <Input
+                    <input
                       type="text"
                       name="lastName"
                       placeholder="Last name"
                       value={formData.lastName}
                       onChange={handleInputChange}
-                      required
+                      className="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-3 text-sm shadow-theme-xs placeholder:text-gray-400 focus:outline-hidden focus:ring-3 focus:border-brand-300 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                     />
                   </div>
                 </div>
@@ -159,15 +166,15 @@ export default function CompleteProfileForm() {
                 <div className="grid grid-cols-1 gap-4">
                   <div>
                     <Label>
-                      Phone<span className="text-error-500">*</span>
+                      Phone (Optional)
                     </Label>
-                    <Input
+                    <input
                       type="text"
                       name="phone"
                       placeholder="+1 (555) 000-0000"
                       value={formData.phone}
                       onChange={handleInputChange}
-                      required
+                      className="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-3 text-sm shadow-theme-xs placeholder:text-gray-400 focus:outline-hidden focus:ring-3 focus:border-brand-300 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                     />
                   </div>
                 </div>
@@ -192,70 +199,70 @@ export default function CompleteProfileForm() {
                 <div className="grid grid-cols-1 gap-4">
                   <div>
                     <Label>
-                      Address<span className="text-error-500">*</span>
+                      Address (Optional)
                     </Label>
-                    <Input
+                    <input
                       type="text"
                       name="address"
                       placeholder="Street address"
                       value={formData.address}
                       onChange={handleInputChange}
-                      required
+                      className="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-3 text-sm shadow-theme-xs placeholder:text-gray-400 focus:outline-hidden focus:ring-3 focus:border-brand-300 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                     />
                   </div>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <Label>
-                        Country<span className="text-error-500">*</span>
+                        Country (Optional)
                       </Label>
-                      <Input
+                      <input
                         type="text"
                         name="country"
                         placeholder="Country"
                         value={formData.country}
                         onChange={handleInputChange}
-                        required
+                        className="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-3 text-sm shadow-theme-xs placeholder:text-gray-400 focus:outline-hidden focus:ring-3 focus:border-brand-300 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                       />
                     </div>
                     <div>
                       <Label>
-                        City/State<span className="text-error-500">*</span>
+                        City/State (Optional)
                       </Label>
-                      <Input
+                      <input
                         type="text"
                         name="cityState"
                         placeholder="City, State"
                         value={formData.cityState}
                         onChange={handleInputChange}
-                        required
+                        className="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-3 text-sm shadow-theme-xs placeholder:text-gray-400 focus:outline-hidden focus:ring-3 focus:border-brand-300 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                       />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <Label>
-                        Postal Code<span className="text-error-500">*</span>
+                        Postal Code (Optional)
                       </Label>
-                      <Input
+                      <input
                         type="text"
                         name="postalCode"
                         placeholder="Postal code"
                         value={formData.postalCode}
                         onChange={handleInputChange}
-                        required
+                        className="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-3 text-sm shadow-theme-xs placeholder:text-gray-400 focus:outline-hidden focus:ring-3 focus:border-brand-300 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                       />
                     </div>
                     <div>
                       <Label>
-                        TAX ID<span className="text-error-500">*</span>
+                        TAX ID (Optional)
                       </Label>
-                      <Input
+                      <input
                         type="text"
                         name="taxId"
                         placeholder="Tax ID"
                         value={formData.taxId}
                         onChange={handleInputChange}
-                        required
+                        className="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-3 text-sm shadow-theme-xs placeholder:text-gray-400 focus:outline-hidden focus:ring-3 focus:border-brand-300 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                       />
                     </div>
                   </div>

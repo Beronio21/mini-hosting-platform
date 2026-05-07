@@ -1,8 +1,10 @@
 MINI HOSTING PLATFORM STATUS
 =============================
 
-Date: 2026-05-06
-Scope: Current project state for the Mini Hosting Platform
+Date: 2026-05-07
+Scope: Current project state and progress tracking
+
+**📖 For detailed setup, usage, and API documentation, see: DOCUMENTATION.md**
 
 RUN LOCATION
 ------------
@@ -45,7 +47,79 @@ REGISTER FIX (2026-05-06)
 - Frontend register page updated to use AuthContext for auto-login after registration.
 - Backend registration inserts default 'user' role for new accounts.
 
-FIXES APPLIED ON 2026-05-05
+TWO-STEP REGISTRATION FIX (2026-05-07)
+--------------------------------------
+
+**ISSUE FOUND:**
+- Previous register fix made profile fields optional, allowing Step 1 to auto-create accounts
+- Backend was accepting email+password only without requiring profile completion
+- Users were seeing account created with default/same names instead of filling profile info
+- Two-step flow was not being enforced
+
+**ROOT CAUSE:**
+- registerSchema in backend had all profile fields as optional
+- Frontend redirect to Step 2 was never happening because API was accepting incomplete data
+
+**FIX APPLIED:**
+- Updated backend registerSchema: Made ALL profile fields REQUIRED (except bio which is optional)
+  * firstName, lastName, phone, address, country, cityState, postalCode, taxId are now REQUIRED
+  * bio remains optional
+  * Backend will reject registration if any required field is missing
+- Updated INSERT statement to safely handle NULL values
+- Frontend Step 1 (SignUpForm.tsx): NO API call, just stores email+password to sessionStorage
+- Frontend Step 2 (CompleteProfileForm.tsx): Collects all profile fields, then calls /api/auth/register with complete data
+
+**FILES UPDATED:**
+- backend/src/routes/auth.ts:
+  * registerSchema now requires firstName, lastName, phone, address, country, cityState, postalCode, taxId
+  * INSERT statement safely converts undefined/empty to NULL for nullable columns
+
+**STATUS:**
+- Backend code updated ✅ (no TypeScript errors)
+- Frontend code already correct ✅
+- PENDING: Restart backend server to deploy changes
+- PENDING: Restart Next.js dev server to reload frontend code
+- PENDING: Test two-step registration flow end-to-end
+
+**HOW THE TWO-STEP FLOW NOW WORKS:**
+1. User lands on /signup → sees SignUpForm (Step 1)
+2. Step 1 shows: Email, Password, Terms checkbox
+3. User enters email+password, clicks "Create Account"
+4. Step 1 validation: Checks email/password/terms
+5. Step 1 stores to sessionStorage: tempEmail, tempPassword
+6. Step 1 redirects to /full-width-pages/auth/complete-profile
+7. Step 2 page loads CompleteProfileForm
+8. CompleteProfileForm loads tempEmail/tempPassword from sessionStorage
+9. Shows form: firstName, lastName, phone, bio, address, country, cityState, postalCode, taxId
+10. User fills all fields, clicks "Complete Registration"
+11. Step 2 calls /api/auth/register with email+password+profile fields
+12. Backend validates ALL fields are present (required check), creates account
+13. Frontend stores JWT token, redirects to /dashboard/services
+
+**NEXT IMMEDIATE STEPS:**
+1. **IMPORTANT: Clear browser cache and restart servers**
+2. Stop the backend server (Ctrl+C in backend terminal)
+3. Start backend again: `npm run dev` or `npm start` in backend folder
+4. Stop the Next.js dashboard dev server (Ctrl+C)
+5. Start it again: `npm run dev` in apps/dashboard/free-nextjs-admin-dashboard-main
+6. **CRITICAL: Hard refresh browser (Ctrl+Shift+R or Cmd+Shift+R) to clear cache**
+7. Navigate to signup page - should now show:
+   - Heading: "Create Account - Step 1 of 2"
+   - Form fields: Email, Password only
+   - Button: "Next" (NOT "Create Account")
+   - NO validation errors for profile fields
+8. Test the complete registration flow:
+   - Step 1: Enter email (e.g., julian@gmail.com) + password, click "Next"
+   - Should redirect to /full-width-pages/auth/complete-profile
+   - Step 2: Now fill in firstName, lastName, phone, address, country, cityState, postalCode, taxId
+   - Click "Complete Registration"
+   - Should create account with all info and redirect to dashboard
+
+**WHY THE VALIDATION ERRORS:**
+- The old form was still cached and calling the backend
+- New backend validation now REQUIRES all profile fields
+- But Step 1 form shouldn't send profile fields - it just stores credentials
+- Now Step 1 button says "Next" and form redirects to Step 2 without API call
 --------------------------
 
 - Fixed Docker port allocation conflicts by changing default service port range from 3001-3999 to 8001-8999 to avoid Next.js dev server conflicts.
@@ -166,6 +240,92 @@ FUTURE PUBLIC APIs (for landing page):
 - GET /api/public/plans    - Available service plans/pricing
 - GET /api/public/features - Platform features
 - GET /api/public/status   - Platform status page
+
+TWO-STEP REGISTRATION WORKFLOW IMPLEMENTATION (2026-05-06)
+-----------------------------------------------------------
+**[PRIORITY]** Restart Next.js dev server to deploy two-step registration changes
+- **[PRIORITY]** Test two-step registration flow end-to-end after server restart
+- 
+ISSUE IDENTIFIED:
+- Registration form was collecting all profile fields (firstName, lastName, phone, address, country, cityState, postalCode, taxId, bio) on a single page
+- User requirement: two-step registration process - Step 1 (email/password only) then Step 2 (profile completion)
+- Error display issue: showing validation errors for missing profile fields before user reaches Step 2
+
+IMPLEMENTATION COMPLETED:
+- Created new two-step registration flow:
+  * Step 1 (SignUpForm.tsx): Email input, Password input, Confirm password checkbox, Terms checkbox
+    - Button: "Create Account" 
+    - Stores credentials to sessionStorage (tempEmail, tempPassword)
+    - Redirects to /full-width-pages/auth/complete-profile
+  * Step 2 (CompleteProfileForm.tsx): All profile fields collected here
+    - Loads credentials from sessionStorage
+    - Displays form with: firstName, lastName, phone, bio, address, country, cityState, postalCode, taxId
+    - Button: "Complete Registration"
+    - Calls /api/auth/register with all data (email, password + profile fields)
+    - Stores JWT token and redirects to /dashboard/services
+  * New route created: /full-width-pages/auth/complete-profile/page.tsx
+
+FILES MODIFIED:
+- SignUpForm.tsx - Restructured for Step 1 only (email + password)
+- CompleteProfileForm.tsx - NEW file for Step 2 (profile details)
+- /full-width-pages/auth/complete-profile/page.tsx - NEW route page
+
+BACKEND SUPPORT:
+- /api/auth/register endpoint already supports all profile fields
+- No backend changes required (already implemented in previous session)
+
+STATUS:
+- Code changes complete with no TypeScript errors
+- PENDING: Dev server restart to deploy changes
+- PENDING: Testing two-step flow in browser after restart
+
+NEXT ACTION:
+1. Restart Next.js dev server (Ctrl+C then npm run dev)
+2. Hard refresh browser (Ctrl+Shift+R)
+3. Test registration flow:
+   - Step 1: Enter email & password, click "Create Account"
+   - Should redirect to profile completion page
+   - Step 2: Fill profile info, click "Complete Registration"
+   - Should create account and redirect to dashboard
+
+SUPABASE LOCAL SETUP (2026-05-06)
+---------------------------------
+
+SUPABASE INITIALIZATION:
+- Supabase project initialized locally via `supabase init`
+- Configuration location: D:\mini-hosting-platform\supabase\config.toml
+- Local services configuration:
+  * Database (PostgreSQL 17): localhost:54322
+  * API (PostgREST): localhost:54321
+  * Studio (Web UI): localhost:54323
+  * Auth service configured
+  * Storage service configured
+
+DATABASE MIGRATION PLAN:
+- Current backend uses: SQLite (better-sqlite3) for local development
+- Target migration: PostgreSQL via Supabase (for production)
+- Migration timeline: Post-launch as nice-to-have upgrade
+- No immediate changes to backend code required
+
+SUPABASE USAGE STATUS:
+- INITIALIZED: Local Supabase project structure in place
+- PENDING: Start local Supabase services when ready to test (`supabase start`)
+- PENDING: Migrate backend from SQLite to Supabase PostgreSQL
+- PENDING: Update backend connection code to use Supabase client (pg or Prisma)
+- PENDING: Migrate existing user and service data from SQLite to Postgres
+
+HOW TO START SUPABASE LOCALLY:
+1. Navigate to: D:\mini-hosting-platform\supabase
+2. Run: `supabase start`
+3. Services will be available at:
+   - Database: postgres://postgres:postgres@localhost:54322/postgres
+   - Studio: http://localhost:54323
+
+NEXT ACTIONS FOR SUPABASE:
+1. Run full end-to-end tests with SQLite before migrating
+2. Plan data migration strategy for existing users/services
+3. Update backend routes to use Supabase client
+4. Test production deployment with Supabase hosted database
 
 TWO-STEP REGISTRATION WORKFLOW IMPLEMENTATION (2026-05-06)
 -----------------------------------------------------------

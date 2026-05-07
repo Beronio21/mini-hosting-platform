@@ -10,15 +10,15 @@ const JWT_SECRET = process.env.JWT_SECRET!;
 const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
-  phone: z.string().optional(),
+  firstName: z.string().min(1, "firstName is required"),
+  lastName: z.string().min(1, "lastName is required"),
+  phone: z.string().min(1, "phone is required"),
   bio: z.string().optional(),
-  address: z.string().optional(),
-  country: z.string().optional(),
-  cityState: z.string().optional(),
-  postalCode: z.string().optional(),
-  taxId: z.string().optional(),
+  address: z.string().min(1, "address is required"),
+  country: z.string().min(1, "country is required"),
+  cityState: z.string().min(1, "cityState is required"),
+  postalCode: z.string().min(1, "postalCode is required"),
+  taxId: z.string().min(1, "taxId is required"),
 });
 
 const loginSchema = z.object({
@@ -62,7 +62,19 @@ router.post("/register", async (req: Request, res: Response) => {
     .prepare(
       `INSERT INTO users (email, password, first_name, last_name, phone, bio, address, country, city_state, postal_code, tax_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
-    .run(email, hash, firstName, lastName, phone, bio || null, address, country, cityState, postalCode, taxId);
+    .run(
+      email,
+      hash,
+      firstName || null,
+      lastName || null,
+      phone || null,
+      bio || null,
+      address || null,
+      country || null,
+      cityState || null,
+      postalCode || null,
+      taxId || null
+    );
   const token = jwt.sign({ id: result.lastInsertRowid, role: "user" }, JWT_SECRET, { expiresIn: "7d" });
 
   res.status(201).json({ token, userId: result.lastInsertRowid, role: "user" });

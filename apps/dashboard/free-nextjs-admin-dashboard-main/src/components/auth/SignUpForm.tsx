@@ -58,10 +58,10 @@ export default function SignUpForm() {
         <div>
           <div className="mb-8">
             <h1 className="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
-              Create Account
+              Create Account - Step 1 of 2
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Enter your email and password. You'll complete your profile on the next step.
+              Enter your email and password. We'll ask for your profile details on the next step.
             </p>
           </div>
 
@@ -122,8 +122,8 @@ export default function SignUpForm() {
                 </div>
               )}
 
-              <button className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
-                Create Account
+              <button type="button" className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
+                Next
               </button>
             </div>
           </form>

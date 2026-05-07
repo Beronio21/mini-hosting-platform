@@ -2,68 +2,47 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
-
-type RegisterResponse = {
-  token: string;
-  userId: number;
-  role: string;
-};
+import { useState } from 'react';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { login, user, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (!isLoading && user) {
-      router.replace('/dashboard/services');
-    }
-  }, [user, isLoading, router]);
-
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleStep1Submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
+
+    // Step 1 Validation
+    if (!email || !password || !confirmPassword) {
+      setError('Please fill in all fields');
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
-    setLoading(true);
-
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (response.ok) {
-        const data: RegisterResponse = await response.json();
-        // Auto-login after successful registration
-        const loginSuccess = await login(email, password);
-        if (loginSuccess) {
-          router.replace('/dashboard/services');
-        } else {
-          setError('Registration successful but login failed. Please try logging in.');
-        }
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Registration failed');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to create account');
-    } finally {
-      setLoading(false);
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
     }
+
+    if (!acceptTerms) {
+      setError('You must accept the terms and conditions');
+      return;
+    }
+
+    // Store credentials in sessionStorage and redirect to Step 2
+    sessionStorage.setItem('tempEmail', email);
+    sessionStorage.setItem('tempPassword', password);
+
+    router.push('/complete-profile');
   }
 
   return (
@@ -73,11 +52,11 @@ export default function RegisterPage() {
           <div className="order-2 p-6 sm:p-10 md:order-1">
             <div className="mb-8">
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-orange-300">Create account</p>
-              <h2 className="mt-3 text-3xl font-semibold text-white">Register</h2>
-              <p className="mt-2 text-sm text-slate-300">Get access to your deployment dashboard in a few steps.</p>
+              <h2 className="mt-3 text-3xl font-semibold text-white">Register - Step 1 of 2</h2>
+              <p className="mt-2 text-sm text-slate-300">Enter your email and password. We'll ask for your profile details on the next step.</p>
             </div>
 
-            <form className="space-y-5" onSubmit={handleSubmit}>
+            <form className="space-y-5" onSubmit={handleStep1Submit}>
               <label className="block space-y-2">
                 <span className="text-sm font-medium text-slate-200">Email</span>
                 <input
@@ -97,7 +76,7 @@ export default function RegisterPage() {
                   type="password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  placeholder="Create a password"
+                  placeholder="Create a password (min 6 characters)"
                   required
                 />
               </label>
@@ -114,6 +93,26 @@ export default function RegisterPage() {
                 />
               </label>
 
+              <label className="flex items-start space-x-3">
+                <input
+                  type="checkbox"
+                  checked={acceptTerms}
+                  onChange={(e) => setAcceptTerms(e.target.checked)}
+                  className="mt-1 h-5 w-5 rounded border border-white/10 bg-white/5 text-orange-500"
+                  required
+                />
+                <span className="text-sm text-slate-300">
+                  I agree to the{' '}
+                  <Link href="#" className="text-orange-300 hover:text-orange-200">
+                    Terms and Conditions
+                  </Link>
+                  {' '}and{' '}
+                  <Link href="#" className="text-orange-300 hover:text-orange-200">
+                    Privacy Policy
+                  </Link>
+                </span>
+              </label>
+
               {error ? (
                 <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
                   {error}
@@ -125,7 +124,7 @@ export default function RegisterPage() {
                 disabled={loading}
                 className="flex w-full items-center justify-center rounded-2xl bg-orange-500 px-4 py-3.5 font-semibold text-white transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {loading ? 'Creating account...' : 'Create account'}
+                {loading ? 'Processing...' : 'Next'}
               </button>
             </form>
 
